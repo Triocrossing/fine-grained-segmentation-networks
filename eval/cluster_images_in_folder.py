@@ -17,7 +17,6 @@ from utils.segmentor import Segmentor
 from models import model_configs
 import cv2
 
-
 def cluster_images_in_folder(network_file, img_folder, save_folder, n_clusters, args):
 
     # get current available device
@@ -154,16 +153,16 @@ def cluster_images_in_folder_for_experiments(network_folder, args):
 
 if __name__ == '__main__':
     global_opts = get_global_opts()
-
+    argsin = sys.argv[1:]
     args = {
         'use_gpu': True,
         # 'miou' (miou over classes present in validation set), 'acc'
         'img_set': '',  # ox, cmu, cityscapes overwriter img_path, img_ext and save_folder_name. Set to empty string to ignore
 
         # THESE VALUES ARE ONLY USED IF 'img_set': ''
-        'img_path':  '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/rear',
+        'img_path':  argsin[0]+'/rear',
         'img_ext': 'jpg',
-        'save_folder_name': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/fgsn',
+        'save_folder_name': argsin[0]+'/fgsn',
 
         # specify this if using specific weight file
         'network_file': '/Users/triocrossing/INRIA/SemanticSegmentation/fine-grained-segmentation-networks/weights/rc-100clusters.pth',
