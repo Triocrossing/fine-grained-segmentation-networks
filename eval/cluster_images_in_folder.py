@@ -15,6 +15,7 @@ from datasets import cityscapes, dataset_configs
 import utils.joint_transforms as joint_transforms
 from utils.segmentor import Segmentor
 from models import model_configs
+import cv2
 
 
 def cluster_images_in_folder(network_file, img_folder, save_folder, n_clusters, args):
@@ -50,24 +51,37 @@ def cluster_images_in_folder(network_file, img_folder, save_folder, n_clusters, 
 
     # get all file names
     filenames_ims = list()
-    filenames_segs = list()
+    filenames_segs_clr = list()
+    filenames_segs_gt = list()
     for root, subdirs, files in os.walk(img_folder):
         filenames_ims += [os.path.join(root, f) for f in files if f.endswith(args['img_ext'])]
         seg_path = root.replace(img_folder, save_folder)
         check_mkdir(seg_path)
-        filenames_segs += [os.path.join(seg_path, f.replace(args['img_ext'], '.png'))
+        filenames_segs_clr += [os.path.join(seg_path, "clr", f.replace(args['img_ext'], 'png'))
+                           for f in os.listdir(root) if f.endswith(args['img_ext'])]
+        filenames_segs_gt += [os.path.join(seg_path, "gt", f.replace(args['img_ext'], 'png'))
                            for f in os.listdir(root) if f.endswith(args['img_ext'])]
 
     # Create segmentor
     segmentor = Segmentor(net, net.n_classes, colorize_fcn=None,
                           n_slices_per_pass=args['n_slices_per_pass'])
     count = 1
-    for im_file, save_path in zip(filenames_ims, filenames_segs):
+    for im_file, save_path in zip(filenames_ims, filenames_segs_clr):
+        save_pathGT = filenames_segs_gt[count-1]
         tnow = time.time()
         print("[%d/%d (%4f s)] %s" % (count, len(filenames_ims), tnow-t0, im_file))
-        segmentor.run_and_save(im_file, save_path, pre_sliding_crop_transform=pre_validation_transform,
+        predictMask = segmentor.run_and_save(im_file, save_path, pre_sliding_crop_transform=pre_validation_transform,
                                sliding_crop=sliding_crop, input_transform=input_transform, skip_if_seg_exists=True, use_gpu=args['use_gpu'])
+        print(im_file)
+        imgo = cv2.imread(im_file)
+        height = imgo.shape[0]
+        width = imgo.shape[1]
         count += 1
+        print(f'h {height}, w {width}')
+        if save_pathGT is not None:
+            check_mkdir(os.path.dirname(save_pathGT))
+            resized = cv2.resize(predictMask, (width,height), interpolation = cv2.INTER_NEAREST)
+            cv2.imwrite(save_pathGT,resized)
 
     tend = time.time()
     print('Time: %f' % (tend-t0))
@@ -133,7 +147,7 @@ def cluster_images_in_folder_for_experiments(network_folder, args):
 
     network_folder_name = network_folder.split('/')[-1]
     tmp = re.search(r"cn(\d+)-", network_folder_name)
-    n_clusters = int(tmp.group(1))
+    n_clusters = 100 #int(tmp.group(1))
     cluster_images_in_folder(
         network_file, args['img_path'], save_folder, n_clusters, args)
 
@@ -147,12 +161,12 @@ if __name__ == '__main__':
         'img_set': '',  # ox, cmu, cityscapes overwriter img_path, img_ext and save_folder_name. Set to empty string to ignore
 
         # THESE VALUES ARE ONLY USED IF 'img_set': ''
-        'img_path': '/home/user/imstocluster',
+        'img_path':  '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/rear',
         'img_ext': 'jpg',
-        'save_folder_name': '/home/user/clusters',
+        'save_folder_name': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/fgsn',
 
         # specify this if using specific weight file
-        'network_file': global_opts['network_file'] if 'network_file' in global_opts else '',
+        'network_file': '/Users/triocrossing/INRIA/SemanticSegmentation/fine-grained-segmentation-networks/weights/rc-100clusters.pth',
 
         'n_slices_per_pass': 10,
         'sliding_transform_step': 2/3.

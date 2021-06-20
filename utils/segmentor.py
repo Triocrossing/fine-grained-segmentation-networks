@@ -155,7 +155,7 @@ class Segmentor():
         else:
             prediction_colorized = Image.fromarray(
                 prediction_orig.astype(np.int32)).convert('I')
-
+        prediction_orig_copy = np.copy(prediction_orig)
         if prediction_colorized.size != img_size_orig:
             prediction_colorized = F.resize(
                 prediction_colorized, img_size_orig[::-1], interpolation=Image.NEAREST)
@@ -164,7 +164,7 @@ class Segmentor():
             check_mkdir(os.path.dirname(seg_path))
             prediction_colorized.save(seg_path)
 
-        return prediction_colorized
+        return prediction_orig_copy
 
 
 class FeatureExtractor():
